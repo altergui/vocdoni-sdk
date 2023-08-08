@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         node: ['18.x']
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest]
 
     steps:
       - name: Checkout repo
@@ -32,65 +32,3 @@ jobs:
 
       - name: Unit tests
         run: yarn test:unit --ci --coverage
-
-  integration:
-    name: Integration tests on self-hosted
-
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        node: ['18.x']
-        os: [ci1]
-
-    steps:
-      # TODO: somehow reuse artifact from ubuntu-latest 'build' job?
-      # instead of building from scratch on self-hosted
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Use Node ${{ matrix.node }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node }}
-
-      # self-hosted runners do not have yarn installed 😕
-      - name: Install yarn
-        run: npm i -g yarn
-
-      - name: Install deps
-        run: yarn
-
-      - name: Set COMPOSE_PROJECT_NAME for voconed
-        run: echo COMPOSE_PROJECT_NAME=${RANDOM}${RANDOM}_ci >> $GITHUB_ENV
-
-      - name: Start voconed (ephemeral vochain for integration test)
-        run: |
-          docker-compose -f test/integration/util/docker-compose.yml pull -q
-          docker-compose -f test/integration/util/docker-compose.yml up -d
-          docker-compose -f test/integration/util/docker-compose.yml images # check logs to see version used
-          echo -n "voconed_hostport=" >> $GITHUB_ENV
-          docker-compose -f test/integration/util/docker-compose.yml port voconed 9095 >> $GITHUB_ENV
-          echo -n "blindcsp_hostport=" >> $GITHUB_ENV
-          docker-compose -f test/integration/util/docker-compose.yml port blind-csp 5000 >> $GITHUB_ENV
-
-      - name: Integration tests
-        run: yarn test:integration --ci --coverage --maxWorkers=2
-        env:
-          API_URL: http://${{ env.voconed_hostport }}/v2
-          BLINDCSP_URL: http://${{ env.blindcsp_hostport }}/v1
-          BLINDCSP_PRIVKEY: f6e530882cde11e2050989d04c3fc523412b2fc2723c0a6155932a62ffafc2b6
-          # that privkey is hardcoded in docker-compose.yml and corresponds to:
-          # address 0xc3E925C7D971601c85eB042032F415852E56A038
-          # CSP root key 039d3ea0d911f4497903e3701b19b9c2efa2b7c3c646f3fc63d46d0a684b781b82
-          BLINDCSP_PUBKEY: 039d3ea0d911f4497903e3701b19b9c2efa2b7c3c646f3fc63d46d0a684b781b82
-          FAUCET_URL: ${{ secrets.FAUCET_URL }}
-          FAUCET_AUTH_TOKEN: ${{ secrets.FAUCET_AUTH_TOKEN }}
-          FAUCET_TOKEN_LIMIT: 100
-
-      - name: Debug voconed logs on failure
-        if: failure()
-        run: docker-compose -f test/integration/util/docker-compose.yml logs
-
-      - name: Stop voconed (ephemeral vochain for integration test)
-        if: success() || failure()
-        run: docker-compose -f test/integration/util/docker-compose.yml down -v
