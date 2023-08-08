@@ -133,7 +133,7 @@ export abstract class VoteCore extends TransactionCore {
       const aProof = ProofArbo.fromPartial({
         siblings: Uint8Array.from(Buffer.from(proof.proof, 'hex')),
         type: ProofArbo_Type.BLAKE2B,
-        leafWeight: new Uint8Array(Buffer.from(proof.value, 'hex')),
+        availableWeight: new Uint8Array(Buffer.from(proof.value, 'hex')),
         keyType,
       });
 
