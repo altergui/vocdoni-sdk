@@ -34,6 +34,7 @@ export abstract class ElectionCore extends TransactionCore {
       processId: new Uint8Array(Buffer.from(strip0x(electionId), 'hex')),
       status: this.processStatusFromElectionStatus(newStatus),
       dummyChange: true,
+      dummyChange2: true,
     });
     return Tx.encode({
       payload: { $case: 'setProcess', setProcess },
