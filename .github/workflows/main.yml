@@ -1,7 +1,12 @@
 name: Main
+
 on:
   push:
-  pull_request: ~
+    paths-ignore:
+      - '.github/**'
+  pull_request:
+    paths-ignore:
+      - '.github/**'
 
 jobs:
   build:
